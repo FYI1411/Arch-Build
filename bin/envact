@@ -6,6 +6,8 @@
 
 if [ "$1" == '-m' ]; then
 	python -m venv "$2"
+elif [ "$1" == '-j' ]; then
+	. "$2"/bin/activate && python -m ipykernel install --user --name=my_env_kernel --display-name="Python 3.14 DS"
 else
-	. "$1/bin/activate"
+	. "$1"/bin/activate
 fi

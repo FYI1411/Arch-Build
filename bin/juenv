@@ -1,3 +1,0 @@
-#! /bin/bash
-
-source $1/bin/activate && python -m ipykernel install --user --name=my_env_kernel --display-name="Python 3.14 DS"
