@@ -23,12 +23,10 @@ main() {
 	else
 		$cmd "$opt" '*' "$@" > /dev/null 2>&1 # Loop the wp
 	fi
-	"""
 	# Fallback to static wallpaper
-    if ! pgrep -x "mpvpaper" > /dev/null && ! pgrep -x "hyprpaper" > /dev/null; then
-        hyprpaper > /dev/null 2>&1
-    fi
-	"""
+	# if ! pgrep -x "mpvpaper" > /dev/null && ! pgrep -x "hyprpaper" > /dev/null; then
+	#    hyprpaper > /dev/null 2>&1
+	# fi
 }
 
 main "$@"
