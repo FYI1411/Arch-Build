@@ -83,3 +83,4 @@ skills-lock.json
 .pixi/
 test*
 .config/unity3d/
+.config/Ryujinx/
