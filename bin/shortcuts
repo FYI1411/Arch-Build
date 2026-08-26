@@ -1,0 +1,254 @@
+#!/usr/bin/env python3
+import os
+import re
+import glob
+import subprocess
+import sys
+
+# Paths
+HYPR_LUA_PATH = os.path.expanduser("~/.config/hypr/hyprland.lua")
+BASH_ALIASES_PATH = os.path.expanduser("~/.bash_aliases")
+BIN_DIR = os.path.expanduser("~/bin")
+
+# 1. Determine mainMod
+main_mod = "ALT"
+try:
+    with open(HYPR_LUA_PATH, "r") as f:
+        content = f.read()
+        mod_match = re.search(r'local\s+mainMod\s*=\s*"([^"]+)"', content)
+        if mod_match:
+            main_mod = mod_match.group(1)
+except Exception:
+    pass
+
+def clean_keys(keys_str):
+    keys_str = keys_str.replace("mainMod", main_mod)
+    parts = []
+    for part in re.split(r'\s*\.\.\s*', keys_str):
+        part = part.strip().strip('"').strip("'")
+        if part:
+            parts.append(part)
+    result = " ".join(parts)
+    result = re.sub(r'\s*\+\s*', ' + ', result)
+    return result
+
+def extract_script_description(filepath):
+    try:
+        with open(filepath, "r") as f:
+            lines = f.readlines()
+        # Look at the first 12 lines for a description comment
+        for line in lines[:12]:
+            line = line.strip()
+            if line.startswith("#") and not line.startswith("#!"):
+                desc = line.lstrip("#").strip()
+                if desc:
+                    return desc
+    except Exception:
+        pass
+    return "Custom user script"
+
+shortcuts = []
+
+# Parse Hyprland Binds
+if os.path.exists(HYPR_LUA_PATH):
+    with open(HYPR_LUA_PATH, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("--"):
+                continue
+            
+            match = re.search(r'hl\.bind\(([^,]+),\s*(hl\.dsp\.[^\)]+\)?)\)', line)
+            if not match:
+                match = re.search(r'hl\.bind\(([^,]+),\s*(hl\.dsp\.[^\}]+(?:\}\)?)*)\s*,\s*\{', line)
+            
+            if match:
+                keys_raw = match.group(1).strip()
+                action_raw = match.group(2).strip()
+                
+                keys = clean_keys(keys_raw)
+                exec_cmd = None
+                display_name = ""
+                
+                exec_match = re.search(r'hl\.dsp\.exec_cmd\("([^"]+)"\)', action_raw)
+                if not exec_match:
+                    exec_match = re.search(r"hl\.dsp\.exec_cmd\('([^']+)'\)", action_raw)
+                
+                if exec_match:
+                    cmd = exec_match.group(1)
+                    display_name = f"Run: {cmd}"
+                    exec_cmd = cmd
+                elif "hl.dsp.window.close()" in action_raw:
+                    display_name = "Close active window"
+                    exec_cmd = "hyprctl dispatch killactive"
+                elif "hl.dsp.exit()" in action_raw:
+                    display_name = "Exit Hyprland"
+                    exec_cmd = "hyprctl dispatch exit"
+                elif "hl.dsp.window.float()" in action_raw:
+                    display_name = "Toggle Float active window"
+                    exec_cmd = "hyprctl dispatch togglefloat active"
+                elif "hl.dsp.window.pseudo()" in action_raw:
+                    display_name = "Toggle Pseudo-tile"
+                    exec_cmd = "hyprctl dispatch pseudo"
+                elif 'hl.dsp.layout("togglesplit")' in action_raw or "hl.dsp.layout('togglesplit')" in action_raw:
+                    display_name = "Toggle layout split"
+                    exec_cmd = "hyprctl dispatch togglesplit"
+                elif "hl.dsp.window.cycle_next()" in action_raw:
+                    display_name = "Focus next window"
+                    exec_cmd = "hyprctl dispatch cyclenext"
+                elif "hl.dsp.window.fullscreen()" in action_raw:
+                    display_name = "Toggle Fullscreen"
+                    exec_cmd = "hyprctl dispatch fullscreen 0"
+                elif "hl.dsp.focus" in action_raw:
+                    dir_match = re.search(r'direction\s*=\s*"([^"]+)"', action_raw)
+                    if dir_match:
+                        d = dir_match.group(1)
+                        d_char = d[0] if d else 'l'
+                        display_name = f"Focus window {d}"
+                        exec_cmd = f"hyprctl dispatch movefocus {d_char}"
+                    else:
+                        ws_match = re.search(r'workspace\s*=\s*(?:["\']([^"\']+)["\']|(\d+))', action_raw)
+                        if ws_match:
+                            ws = ws_match.group(1) or ws_match.group(2)
+                            display_name = f"Focus Workspace {ws}"
+                            exec_cmd = f"hyprctl dispatch workspace {ws}"
+                elif "hl.dsp.window.move" in action_raw:
+                    dir_match = re.search(r'direction\s*=\s*"([^"]+)"', action_raw)
+                    if dir_match:
+                        d = dir_match.group(1)
+                        display_name = f"Move window {d}"
+                        exec_cmd = f"hyprctl dispatch movewindow {d}"
+                    else:
+                        ws_match = re.search(r'workspace\s*=\s*(?:["\']([^"\']+)["\']|(\d+))', action_raw)
+                        if ws_match:
+                            ws = ws_match.group(1) or ws_match.group(2)
+                            display_name = f"Move window to Workspace {ws}"
+                            exec_cmd = f"hyprctl dispatch movetoworkspace {ws}"
+                elif "hl.dsp.submap" in action_raw:
+                    submap_match = re.search(r'submap\("([^"]+)"\)', action_raw)
+                    if submap_match:
+                        sm = submap_match.group(1)
+                        display_name = f"Switch to submap: {sm}"
+                        exec_cmd = f"hyprctl dispatch submap {sm}"
+                
+                if not display_name:
+                    display_name = f"Action: {action_raw}"
+                    
+                shortcuts.append({
+                    "type": "Keybind",
+                    "trigger": keys,
+                    "action": display_name,
+                    "exec": exec_cmd
+                })
+
+# Parse Bash Aliases
+if os.path.exists(BASH_ALIASES_PATH):
+    with open(BASH_ALIASES_PATH, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("alias "):
+                match = re.match(r"alias\s+([^=]+)=['\"](.*)['\"]", line)
+                if match:
+                    alias_name = match.group(1).strip()
+                    alias_cmd = match.group(2).strip()
+                    shortcuts.append({
+                        "type": "Alias",
+                        "trigger": alias_name,
+                        "action": f"Shell command: {alias_cmd}",
+                        "exec": alias_name  # Execute the alias name in the terminal
+                    })
+
+# Parse Bin Directory Scripts
+if os.path.exists(BIN_DIR):
+    for filepath in sorted(glob.glob(os.path.join(BIN_DIR, "*"))):
+        # Ignore our own script to avoid recursion, and local folder
+        if os.path.basename(filepath) in ["fuzzy-shortcuts", ".local"]:
+            continue
+        if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
+            filename = os.path.basename(filepath)
+            desc = extract_script_description(filepath)
+            shortcuts.append({
+                "type": "Script",
+                "trigger": filename,
+                "action": f"Run script: {desc}",
+                "exec": filepath
+            })
+
+if not shortcuts:
+    print("No shortcuts found!")
+    sys.exit(0)
+
+# Format list for fuzzel (using aligned columns for monospace fonts)
+menu_lines = []
+for s in shortcuts:
+    line = f"[{s['type']}]".ljust(11) + f" {s['trigger']}".ljust(26) + f" │ {s['action']}"
+    menu_lines.append(line)
+
+menu_input = "\n".join(menu_lines)
+
+# Run fuzzel in dmenu mode returning index
+try:
+    proc = subprocess.Popen(
+        ["fuzzel", "--dmenu", "--index", "--prompt=Shortcuts ❯ ", "--width=85", "--lines=15"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    stdout, stderr = proc.communicate(input=menu_input)
+except Exception:
+    # Fallback to fzf if fuzzel fails (e.g., if we run in a pure terminal)
+    try:
+        proc = subprocess.Popen(
+            ["fzf", "--prompt=Shortcuts ❯ "],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True
+        )
+        stdout, _ = proc.communicate(input=menu_input)
+        selected_text = stdout.strip()
+        if not selected_text:
+            sys.exit(0)
+        selected_idx = menu_lines.index(selected_text)
+    except Exception as e2:
+        print(f"Error launching menu: {e2}", file=sys.stderr)
+        sys.exit(1)
+else:
+    if proc.returncode != 0 or not stdout.strip():
+        sys.exit(0)
+    try:
+        selected_idx = int(stdout.strip())
+    except ValueError:
+        sys.exit(1)
+
+# Execute the selected shortcut
+selected_item = shortcuts[selected_idx]
+exec_cmd = selected_item["exec"]
+item_type = selected_item["type"]
+
+if not exec_cmd:
+    sys.exit(0)
+
+if item_type == "Alias":
+    # Run aliases in an interactive terminal so they have access to user environment/functions
+    subprocess.Popen(["kitty", "bash", "-ic", f"{exec_cmd}; exec bash"])
+elif item_type == "Script":
+    # If the script has interactive keywords (like nmtui, read, nvim, yazi), run in terminal
+    is_interactive = False
+    try:
+        with open(exec_cmd, "r") as f:
+            script_content = f.read()
+            if any(kw in script_content for kw in ["nmtui", "read ", "nvim", "yazi", "dialog"]):
+                is_interactive = True
+    except Exception:
+        pass
+        
+    if is_interactive:
+        subprocess.Popen(["kitty", "bash", "-ic", f"{exec_cmd}; exec bash"])
+    else:
+        subprocess.Popen(exec_cmd, shell=True, start_new_session=True)
+elif item_type == "Keybind":
+    if exec_cmd.startswith("hyprctl "):
+        subprocess.Popen(exec_cmd.split())
+    else:
+        # GUI app or background shell command
+        subprocess.Popen(exec_cmd, shell=True, start_new_session=True)

@@ -337,6 +337,9 @@ hl.bind(mainMod .. " + " .. "B", hl.dsp.exec_cmd("pavucontrol"))
 
 hl.bind(mainMod .. " + " .. "G", hl.dsp.exec_cmd("toggle"))
 
+-- Fuzzy-find and run keyboard shortcuts, aliases, and custom bin scripts
+hl.bind(mainMod .. " + " .. "K", hl.dsp.exec_cmd("shortcuts"))
+
 -- Move window with mainMod + arrow keys
 
 hl.bind(mainMod .. " + " .. "SHIFT" .. " + " .. "left", hl.dsp.window.move({ direction = "l" }))
