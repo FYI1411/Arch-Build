@@ -46,19 +46,19 @@
       "actions": [
         {
           "label": "",
-          "command": "swaync-client -cp; sleep 0.3; hyprctl dispatch exec 'shot'"
+          "command": "swaync-client -cp; sleep 0.3; shot"
         },
         {
           "label": "",
-          "command": "swaync-client -cp; sleep 0.3; hyprctl dispatch exec 'kitty yazi'"
+          "command": "swaync-client -cp; sleep 0.3; kitty yazi"
         },
         {
           "label": "ᯤ",
-          "command": "swaync-client -cp; sleep 0.3; hyprctl dispatch exec 'kitty wifi'"
+          "command": "swaync-client -cp; sleep 0.3; kitty wifi"
         },
-		{
+        {
           "label": "모",
-          "command": "swaync-client -cp; sleep 0.3; hyprctl dispatch exec 'rog-control-center'"
+          "command": "swaync-client -cp; sleep 0.3; rog-control-center"
         }
       ]
     },
@@ -72,7 +72,7 @@
     },
     "backlight": {
       "label": "󰃠 ",
-      "device": "intel_backlight"
+      "device": "amdgpu_bl1"
     },
     "notifications": {
       "notification-visibility": {}

@@ -79,56 +79,55 @@ if os.path.exists(HYPR_LUA_PATH):
                     exec_cmd = cmd
                 elif "hl.dsp.window.close()" in action_raw:
                     display_name = "Close active window"
-                    exec_cmd = "hyprctl dispatch killactive"
+                    exec_cmd = f"hyprctl dispatch {action_raw}"
                 elif "hl.dsp.exit()" in action_raw:
                     display_name = "Exit Hyprland"
-                    exec_cmd = "hyprctl dispatch exit"
+                    exec_cmd = f"hyprctl dispatch {action_raw}"
                 elif "hl.dsp.window.float()" in action_raw:
                     display_name = "Toggle Float active window"
-                    exec_cmd = "hyprctl dispatch togglefloat active"
+                    exec_cmd = f"hyprctl dispatch {action_raw}"
                 elif "hl.dsp.window.pseudo()" in action_raw:
                     display_name = "Toggle Pseudo-tile"
-                    exec_cmd = "hyprctl dispatch pseudo"
+                    exec_cmd = f"hyprctl dispatch {action_raw}"
                 elif 'hl.dsp.layout("togglesplit")' in action_raw or "hl.dsp.layout('togglesplit')" in action_raw:
                     display_name = "Toggle layout split"
-                    exec_cmd = "hyprctl dispatch togglesplit"
+                    exec_cmd = f"hyprctl dispatch {action_raw}"
                 elif "hl.dsp.window.cycle_next()" in action_raw:
                     display_name = "Focus next window"
-                    exec_cmd = "hyprctl dispatch cyclenext"
+                    exec_cmd = f"hyprctl dispatch {action_raw}"
                 elif "hl.dsp.window.fullscreen()" in action_raw:
                     display_name = "Toggle Fullscreen"
-                    exec_cmd = "hyprctl dispatch fullscreen 0"
+                    exec_cmd = f"hyprctl dispatch {action_raw}"
                 elif "hl.dsp.focus" in action_raw:
                     dir_match = re.search(r'direction\s*=\s*"([^"]+)"', action_raw)
                     if dir_match:
                         d = dir_match.group(1)
-                        d_char = d[0] if d else 'l'
                         display_name = f"Focus window {d}"
-                        exec_cmd = f"hyprctl dispatch movefocus {d_char}"
                     else:
                         ws_match = re.search(r'workspace\s*=\s*(?:["\']([^"\']+)["\']|(\d+))', action_raw)
                         if ws_match:
                             ws = ws_match.group(1) or ws_match.group(2)
                             display_name = f"Focus Workspace {ws}"
-                            exec_cmd = f"hyprctl dispatch workspace {ws}"
+                    exec_cmd = f"hyprctl dispatch {action_raw}"
                 elif "hl.dsp.window.move" in action_raw:
                     dir_match = re.search(r'direction\s*=\s*"([^"]+)"', action_raw)
                     if dir_match:
                         d = dir_match.group(1)
                         display_name = f"Move window {d}"
-                        exec_cmd = f"hyprctl dispatch movewindow {d}"
                     else:
                         ws_match = re.search(r'workspace\s*=\s*(?:["\']([^"\']+)["\']|(\d+))', action_raw)
                         if ws_match:
                             ws = ws_match.group(1) or ws_match.group(2)
                             display_name = f"Move window to Workspace {ws}"
-                            exec_cmd = f"hyprctl dispatch movetoworkspace {ws}"
+                    exec_cmd = f"hyprctl dispatch {action_raw}"
                 elif "hl.dsp.submap" in action_raw:
                     submap_match = re.search(r'submap\("([^"]+)"\)', action_raw)
                     if submap_match:
                         sm = submap_match.group(1)
                         display_name = f"Switch to submap: {sm}"
-                        exec_cmd = f"hyprctl dispatch submap {sm}"
+                    exec_cmd = f"hyprctl dispatch {action_raw}"
+                else:
+                    exec_cmd = f"hyprctl dispatch {action_raw}"
                 
                 if not display_name:
                     display_name = f"Action: {action_raw}"
@@ -247,7 +246,10 @@ elif item_type == "Script":
     else:
         subprocess.Popen(exec_cmd, shell=True, start_new_session=True)
 elif item_type == "Keybind":
-    if exec_cmd.startswith("hyprctl "):
+    if exec_cmd.startswith("hyprctl dispatch "):
+        dispatch_arg = exec_cmd[len("hyprctl dispatch "):]
+        subprocess.Popen(["hyprctl", "dispatch", dispatch_arg])
+    elif exec_cmd.startswith("hyprctl "):
         subprocess.Popen(exec_cmd.split())
     else:
         # GUI app or background shell command
