@@ -166,7 +166,7 @@ hl.bind(mainMod .. " + " .. "M", hl.dsp.exit())
 
 hl.bind(mainMod .. " + " .. "V", hl.dsp.window.float())
 
-hl.bind(mainMod .. " + " .. "R", hl.dsp.exec_cmd("fuzzel"))
+hl.bind(mainMod .. " + " .. "R", hl.dsp.exec_cmd("pkill -x fuzzel || fuzzel"))
 
 -- default app launcher is wofi
 
