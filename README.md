@@ -21,7 +21,7 @@ A streamlined, minimal, and keyboard-driven personal desktop environment and con
 - [Custom Utility Scripts (`bin/`)](#-custom-utility-scripts-bin)
 - [Keyboard Shortcuts Reference](#-keyboard-shortcuts-reference)
 - [Installation & Bootstrap Guide](#-installation--bootstrap-guide)
-- [Helpful Shell Aliases](#-helpful-shell-aliases)
+- [Bash Aliases & Git Workflow (`gp`)](#-bash-aliases--git-workflow-gp)
 
 ---
 
@@ -130,7 +130,7 @@ The [`bin/`](bin/) folder contains lightweight, purposeful scripts added directl
 | **[`wifi`](bin/wifi)** | Bash | Terminal wrapper around `nmtui` and `nmcli` with a quick toggle for hardware airplane mode (`rfkill`). |
 | **[`envact`](bin/envact)** | Bash | Quick helper to create/activate Python virtual environments and register custom Jupyter kernels. |
 | **[`extract`](bin/extract)** | Bash | Universal archive extractor handling `.tar.*`, `.zip`, `.7z`, `.rar`, and `.gz`. |
-| **[`gp`](bin/gp)** | Bash | Streamlined git add, commit, and push wrapper with status checks and optional auto-commenting. |
+| **[`gp`](bin/gp)** | Bash | Git commit and push automation with flags (`-a`, `-m`) and automated token clipboard copy via `pass`. |
 | **[`gi`](bin/gi)** | Bash | Appends specified paths or patterns to `~/.gitignore` safely avoiding duplicates. |
 | **[`asm`](bin/asm)** | Bash | Compiles, links, and executes x86_64 NASM assembly source files in a single pass. |
 | **[`cpp`](bin/cpp)** | Bash | Compiles and executes C/C++ files on the fly with automatic cleanup. |
@@ -269,24 +269,89 @@ sudo systemctl enable --now NetworkManager cronie bluetooth
 
 ---
 
-## 💡 Helpful Shell Aliases
+## 💡 Bash Aliases & Git Workflow (`gp`)
 
-Pre-configured in [`.bash_aliases`](.bash_aliases) for quick system administration:
+Pre-configured shortcuts defined in [`.bash_aliases`](.bash_aliases) and helper scripts for fast system maintenance, navigation, and git operations.
 
-| Alias | Command | Purpose |
+### 📦 Complete List of Bash Aliases
+
+#### 1. System Maintenance & Bootstrapping
+| Alias | Exact Command | Purpose |
 | :--- | :--- | :--- |
-| `install` | `driver && package && aur_package && service && sudo ~/install/note` | Full system bootstrapping |
-| `update` | `aur --noconfirm && clean` | Full system & AUR upgrade with cache cleanup |
-| `clean` | Removes orphaned packages and clears pacman / yay cache | Keep storage clean |
-| `mirror` | Updates fastest 10 HTTPS mirrors using `reflector` | Optimize download speeds |
-| `update-grub`| `sudo grub-mkconfig -o /boot/grub/grub.cfg` | Regenerate GRUB config |
-| `driver` | `sudo pacman -S $(cat ~/install/drivers)` | Reinstall target graphics drivers |
-| `package` | `sudo pacman -S $(cat ~/install/packages/*)` | Reinstall repository packages |
-| `aur_package`| `yay -S $(cat ~/install/aurs)` | Reinstall AUR packages |
-| `service` | Enables all services in `install/services` | Ensure daemons are running |
-| `open` | `xdg-open` | Open any file with default GUI app |
-| `gs` / `ga` / `gd` | `git status` / `git add -A` / `git diff` | Quick git workflows |
-| `sdn` | `shutdown now` | Immediate shutdown |
+| `install` | `driver && package && aur_package && service && sudo ~/install/note` | Full system bootstrap sequence (drivers, packages, AUR, services, and system tweaks) |
+| `update` | `aur --noconfirm && clean` | Upgrades all official and AUR packages, followed by complete cache cleaning |
+| `clean` | `aur -Rns --noconfirm $(pacman -Qtdq); aur -Scc --noconfirm; sudo pacman -Scc --noconfirm` | Removes orphaned dependencies and purges `pacman` and `yay` cache |
+| `mirror` | `sudo reflector --latest 10 --protocol https --sort rate --save /etc/pacman.d/mirrorlist` | Benchmarks and updates the 10 fastest HTTPS Arch mirrors |
+| `update-grub` | `sudo grub-mkconfig -o /boot/grub/grub.cfg` | Regenerates the GRUB bootloader configuration |
+| `driver` | `sudo pacman -S $(cat ~/install/drivers)` | Installs all hardware, Vulkan, and graphics drivers |
+| `package` | `sudo pacman -S $(cat ~/install/packages/*)` | Installs all official repository packages |
+| `aur_package` | `yay -S $(cat ~/install/aurs)` | Installs all configured AUR packages |
+| `service` | `sudo systemctl enable --now $(cat ~/install/services)` | Enables and immediately starts all defined systemd services |
+| `aur` | `yay` | Convenience shortcut to invoke `yay` AUR helper |
+| `sdn` | `shutdown now` | Immediate system shutdown |
+
+#### 2. Productivity & Daily Utilities
+| Alias | Exact Command | Purpose |
+| :--- | :--- | :--- |
+| `open` | `xdg-open` | Opens any file or URL with the system default application |
+| `mf` | `cd ~/Desktop` | Quick jump to the Desktop directory ("move to folder") |
+| `cron` | `crontab ~/.crontab` | Installs/reloads cron schedule from the repository `.crontab` file |
+
+#### 3. Git Shortcuts
+| Alias | Exact Command | Purpose |
+| :--- | :--- | :--- |
+| `gs` | `git status` | Quick status check of staged and unstaged changes |
+| `ga` | `git add -A` | Stages all modified, deleted, and untracked files |
+| `gd` | `git diff` | Shows unstaged changes against HEAD |
+| `gc` | `git checkout -- ` | Reverts unstaged modifications in the working tree |
+| `gr` | `git restore --staged .` | Unstages all staged changes |
+
+---
+
+### 🔑 Git Push Automation & Password Manager (`pass` for `gp`)
+
+The [`bin/gp`](bin/gp) script works as the primary commit and push utility alongside the `ga` / `gs` / `gd` / `gc` aliases. It integrates directly with **`pass`** (the standard Unix password manager) to securely copy your GitHub credentials before pushing.
+
+#### How `gp` Works
+```bash
+gp          # Prompts for a commit comment, stages all changes (`git add -A`), commits, copies token, and pushes
+gp -a       # Auto-commits with default message ("auto commit from gp command") and pushes
+gp -m       # Skips commit and immediately pushes existing local commits
+```
+
+#### Under the Hood: `pass -c github`
+At the end of [`bin/gp`](bin/gp), the script executes:
+```bash
+pass -c github && echo "Pass copied" && git push && git status
+```
+1. **Clipboard Decryption**: `pass -c github` decrypts the `github` credential and copies your GitHub Personal Access Token (PAT) directly to the system clipboard (`wl-clipboard` on Wayland).
+2. **Terminal Notification**: Prints `Pass copied` to notify you that the credential is in the clipboard buffer (auto-cleared after 45 seconds).
+3. **Push & Authenticate**: Runs `git push`. When prompted for your password or token by Git, simply paste it from your clipboard (`Ctrl+Shift+V` or middle-click).
+4. **Verification**: Finishes with `git status` to verify synchronization with `origin`.
+
+#### ⚙️ Initial Setup for `pass`
+To use `gp` seamlessly, `pass` must have a `github` entry configured:
+
+1. **Initialize `pass` with your GPG Key** (if not already done):
+   ```bash
+   gpg --full-generate-key
+   pass init <your-gpg-id-or-email>
+   ```
+
+2. **Insert your GitHub Personal Access Token**:
+   ```bash
+   pass insert github
+   # When prompted, paste your GitHub Personal Access Token (classic or fine-grained)
+   ```
+
+3. **Verify clipboard retrieval**:
+   ```bash
+   pass -c github
+   # Should output: Copied github to clipboard. Will clear in 45 seconds.
+   ```
+
+> [!NOTE]
+> `pass` requires `wl-clipboard` (included in [`install/packages/desktop`](install/packages/desktop)) to interact with the Wayland clipboard. If the `github` entry is missing, `gp` will print an error from `pass` and stop before pushing.
 
 ---
 
