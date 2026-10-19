@@ -227,7 +227,7 @@ install
 If you prefer applying each stage manually:
 
 #### 1. Hardware Drivers & Kernel Headers
-**The drivers are dependant on your hardware and should be changed accordingly
+**The drivers are dependant on your hardware and should be changed accordingly**
 ```bash
 sudo pacman -S - < install/drivers
 ```
