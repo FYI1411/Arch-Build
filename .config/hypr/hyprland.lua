@@ -362,5 +362,5 @@ hl.env("QT_SCALE_FACTOR_ROUNDING_POLICY", "RoundPreferFloor")
 
 -- Autostart
 hl.on("hyprland.start", function()
-    hl.exec_cmd("waybar & fcitx5 & livewp & systemctl --user start hyprpolkitagent")
+    hl.exec_cmd("waybar & fcitx5 & hyprpaper & systemctl --user start hyprpolkitagent")
 end)
