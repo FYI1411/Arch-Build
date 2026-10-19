@@ -1,4 +1,6 @@
-# options to add in case rebuild
+# Options to add in case rebuild
+# Comment out or remove the lines below if you don't want to disable GRUB
+
 file='/etc/default/grub'
 sed -i \
 '/GRUB_CMDLINE_LINUX_DEFAULT=/c\GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet nvidia-drm.modeset=1 nvidia_drm.fbdev=1 amd_pstate=active"' \
@@ -6,20 +8,27 @@ $file
 sed -i '/GRUB_DISABLE_OS_PROBER=/c\GRUB_DISABLE_OS_PROBER=false' $file
 sed -i '/GRUB_TIMEOUT=/c\GRUB_TIMEOUT=-1' $file
 
+# The commands below are for autologin, 
+# replace ExecStart with the line below and change the username from 'Default'
+# ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin Default %I $TERM
+
 file='/etc/systemd/system/getty@tty1.service.d'
 mkdir -p $file && touch "$file"/autologin.conf
 file="$file"/autologin.conf
 tee $file > /dev/null <<EOT
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin pergon %I $TERM
 EOT
+
+# sudo configs
 
 file='/etc/sudoers'
 sed -i '/# %wheel ALL=(ALL:ALL) NOPASSWD/c\%wheel ALL=(ALL:ALL) NOPASSWD: ALL' $file
 if [[ "$(grep -c 'Defaults passwd_timeout=' $file)" == 0 ]]; then
 	echo 'Defaults passwd_timeout=0' >> $file
 fi
+
+# Backlight rules for changing brightness, might depends on hardware
 
 file='/etc/udev/rules.d/backlight.rules'
 echo 'ACTION=="add", SUBSYSTEM=="backlight", RUN+="/bin/chgrp video $sys$devpath/brightness", RUN+="/bin/chmod g+w $sys$devpath/brightness"'\
